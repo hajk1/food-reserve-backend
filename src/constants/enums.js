@@ -1,0 +1,13 @@
+export const FoodCategory = {
+  MAIN_COURSE: 'MAIN_COURSE',
+  SALAD: 'SALAD',
+  DESSERT: 'DESSERT',
+  BEVERAGE: 'BEVERAGE',
+  APPETIZER: 'APPETIZER'
+};
+
+export const ReservationStatus = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED'
+};
