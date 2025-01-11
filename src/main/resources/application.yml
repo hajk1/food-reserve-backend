@@ -34,11 +34,12 @@ spring:
 logging:
   level:
     root: INFO
-    me.hajk1.foodreservation: DEBUG
+    me.hajk1.foodreservation.security: DEBUG
+    org.springframework.security.crypto.bcrypt: INFO
     org:
       springframework:
         web: DEBUG
-        security: DEBUG
+        security: INFO
       hibernate:
         SQL: DEBUG
         type:
@@ -70,7 +71,7 @@ management:
 
 # JWT Configuration
 jwt:
-  secret: ThisIsMySecretKey1403@
+  secret: your_jwt_secret_key_should_be_at_least_256_bits_long_for_security
   expiration: 86400
 
 # Debug Configuration

@@ -1,9 +1,10 @@
 package me.hajk1.foodreservation.security;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -13,11 +14,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
@@ -30,24 +30,23 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        logger.debug("Configuring SecurityFilterChain");
-
-        http
-            .csrf().disable()
+        log.debug("Configuring SecurityFilterChain");
+        http.csrf().disable()
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/health").permitAll()
-                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
-                .requestMatchers("/v3/api-docs/**",
-                    "/v3/api-docs.yaml",
+                .requestMatchers(
+                    "/api/auth/**",
+                    "/api/test/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
-                    "/swagger-resources/**",
-                    "/webjars/**").permitAll()
+                    "/v3/api-docs/**"
+                ).permitAll()
+                .requestMatchers("/api/food/**", "/api/reservation/**").hasRole("USER")
                 .anyRequest().authenticated()
             )
             .sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
+            .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -55,13 +54,26 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        logger.debug("Creating PasswordEncoder bean");
-        return new BCryptPasswordEncoder();
+        log.debug("Creating BCryptPasswordEncoder bean");
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
+        // Test the encoder
+        String testPassword = "admin";
+        String encoded = encoder.encode(testPassword);
+        log.debug("Test password encoding - Raw: {}, Encoded: {}", testPassword, encoded);
+        log.debug("Test password verification: {}", encoder.matches(testPassword, encoded));
+        return encoder;
+    }
+
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        log.debug("Creating CustomAuthenticationProvider");
+        CustomAuthenticationProvider authProvider = new CustomAuthenticationProvider(userDetailsService, passwordEncoder());
+        return authProvider;
     }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        logger.debug("Creating AuthenticationManager bean");
+        log.debug("Creating AuthenticationManager");
         return config.getAuthenticationManager();
     }
 }
