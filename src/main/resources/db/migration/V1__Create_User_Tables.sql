@@ -39,7 +39,10 @@ CREATE TRIGGER update_app_users_updated_at
 
 -- Insert default admin user (password: admin123)
 INSERT INTO app_users (username, password, enabled)
-VALUES ('admin', '$2a$10$rYOQnxKYqQPQd.WVPZbZp.yvFXw5bAFh54Z4pBKqHj8orQMQEAp2O', true);
+VALUES ('admin', '$2a$10$AQIf00u4Un33oubOLCqJuObmxMdjRBB7VLN.B/ZYcOtlQ28j4MZwy', true);
 
 INSERT INTO app_user_roles (user_id, role)
 VALUES (1, 'ADMIN');
+
+INSERT INTO app_user_roles (user_id, role)
+VALUES (1, 'USER');
