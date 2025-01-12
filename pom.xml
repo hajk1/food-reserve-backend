@@ -10,7 +10,7 @@
 
     <groupId>com.example</groupId>
     <artifactId>food-reservation</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>food-reservation</name>
     <description>Food Reservation API</description>
 
