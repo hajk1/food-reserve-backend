@@ -1,4 +1,3 @@
-
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/food_reserve_db  # Update with your DB details
@@ -18,36 +17,33 @@ spring:
     jpa:
       repositories:
         enabled: true
-
   jackson:
     serialization:
-      write-dates-as-timestamps:  false
+      write-dates-as-timestamps: false
   port: 8080
+
 # Flyway Configuration
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    locations: classpath:db/migration
-    validate-on-migrate: true
+flyway:
+  enabled: true
+  baseline-on-migrate: true
+  locations: classpath:db/migration
+  validate-on-migrate: true
 
-
-  profiles:
-    active: prod
 logging:
   level:
     root: INFO
-    me.hajk1.foodreservation.security: DEBUG
+    me.hajk1.foodreservation.security: INFO
     org.springframework.security.crypto.bcrypt: INFO
     org:
       springframework:
-        web: DEBUG
+        web: INFO
         security: INFO
       hibernate:
-        SQL: DEBUG
+        SQL: INFO
         type:
           descriptor:
             sql:
-              BasicBinder: TRACE
+              BasicBinder: INFO
 
 # OpenAPI/Swagger Configuration
 springdoc:
@@ -79,5 +75,6 @@ jwt:
 # Debug Configuration
 debug: true
 trace: false
+
 api:
-  base-url: https://a-mohamadi.ir
+  base-url: http://localhost:8080
