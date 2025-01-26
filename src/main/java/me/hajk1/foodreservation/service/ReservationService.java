@@ -15,16 +15,16 @@ import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
-    
     private final ReservationRepository reservationRepository;
     private final ReservationMapper reservationMapper;
-    
-    @Autowired
-    public ReservationService(ReservationRepository reservationRepository, ReservationMapper reservationMapper) {
+
+  @Autowired
+  public ReservationService(
+      ReservationRepository reservationRepository, ReservationMapper reservationMapper) {
         this.reservationRepository = reservationRepository;
         this.reservationMapper = reservationMapper;
     }
-    
+
     public FoodReservationResponse createReservation(FoodReservationRequest request) {
         FoodReservation reservation = FoodReservation.builder()
             .id(UUID.randomUUID().toString())
@@ -33,20 +33,34 @@ public class ReservationService {
             .reservationDate(request.getReservationDate())
             .status(ReservationStatus.CONFIRMED)
             .build();
-            
+
         FoodReservation savedReservation = reservationRepository.save(reservation);
         return reservationMapper.toResponse(savedReservation);
     }
 
-    public List<FoodReservationResponse> getPersonReservations(String personId, LocalDate startDate, LocalDate endDate) {
-        return reservationRepository.findByPersonIdAndDateRange(personId, startDate, endDate)
-            .stream()
-            .map(reservationMapper::toResponse)
-            .collect(Collectors.toList());
+  public List<FoodReservationResponse> getPersonReservations(
+      String personId, LocalDate startDate, LocalDate endDate) {
+    List<FoodReservation> reservations;
+
+    if (startDate != null && endDate != null) {
+      reservations =
+          reservationRepository.findByPersonIdAndReservationDateBetween(
+              personId, startDate, endDate);
+    } else if (startDate != null) {
+      reservations =
+          reservationRepository.findByPersonIdAndReservationDateGreaterThanEqual(
+              personId, startDate);
+    } else if (endDate != null) {
+      reservations =
+          reservationRepository.findByPersonIdAndReservationDateLessThanEqual(personId, endDate);
+    } else {
+      reservations = reservationRepository.findByPersonId(personId);
+    }
+
+    return reservations.stream().map(reservationMapper::toResponse).collect(Collectors.toList());
     }
 
     public void deleteOrderedFood(String id) {
-//        FoodReservation reservation = reservationRepository.findById(id)
-//            .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));
-        reservationRepository.deleteById(id);    }
+    reservationRepository.deleteById(id);
+  }
 }

@@ -39,6 +39,10 @@ public class User {
   @Column(nullable = false)
   private String password;
 
+  @Column private String firstName;
+
+  @Column private String lastName;
+
   @Column(nullable = false)
   private Boolean enabled = true;
 

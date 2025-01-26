@@ -34,6 +34,8 @@ public class UserService {
         User user = new User();
         user.setUsername(registerRequest.getUsername());
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+    user.setFirstName(registerRequest.getFirstName());
+    user.setLastName(registerRequest.getLastName());
         user.setEnabled(true);
 
         List<String> roles = registerRequest.getRoles();
@@ -69,6 +71,8 @@ public class UserService {
 
         UserProfileResponse response = new UserProfileResponse();
         response.setUsername(user.getUsername());
+    response.setFirstName(user.getFirstName());
+    response.setLastName(user.getLastName());
         response.setRoles(user.getRoles());
         response.setEnabled(user.getEnabled());
 

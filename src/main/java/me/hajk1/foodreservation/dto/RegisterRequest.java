@@ -15,6 +15,16 @@ public class RegisterRequest {
     @Schema(description = "Username for the new account", example = "john.doe")
     private String username;
 
+  @NotBlank(message = "First name is required")
+  @Size(min = 3, max = 50, message = "First name must be between 3 and 50 characters")
+  @Schema(description = "Username for the new account", example = "john")
+  private String firstName;
+
+  @NotBlank(message = "Last name is required")
+  @Size(min = 3, max = 50, message = "Last name must be between 3 and 50 characters")
+  @Schema(description = "Last name for the new account", example = "doe")
+  private String lastName;
+
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")
     @Schema(description = "Password for the new account", example = "password123")

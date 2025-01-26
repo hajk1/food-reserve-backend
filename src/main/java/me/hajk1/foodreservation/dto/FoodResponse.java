@@ -10,6 +10,8 @@ public class FoodResponse {
     private String id;
     private String name;
     private String description;
+  private String imageUrl;
     private FoodCategory category;
+  private Integer remainingServings;
     private boolean available;
 }

@@ -11,6 +11,12 @@ public class UserProfileResponse {
     @Schema(description = "Username of the user", example = "john.doe")
     private String username;
 
+  @Schema(description = "First name of the user", example = "john")
+  private String firstName;
+
+  @Schema(description = "Last name of the user", example = "doe")
+  private String lastName;
+
     @Schema(description = "List of user roles", example = "[\"USER\"]")
     private List<String> roles;
 

@@ -13,7 +13,10 @@ public class FoodReservationRequest {
     
     @NotBlank(message = "Person ID is required")
     private String personId;
-    
+
+  @NotBlank(message = "Max Servings is required")
+  private Integer maxServings;
+
     @NotNull(message = "Reservation date is required")
     @FutureDate
     private LocalDate reservationDate;
