@@ -2,10 +2,12 @@ package me.hajk1.foodreservation.service;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import java.util.UUID;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
+import me.hajk1.foodreservation.dto.DailyMenuRequest;
 import me.hajk1.foodreservation.dto.DailyMenuResponse;
 import me.hajk1.foodreservation.dto.FoodRequest;
-import me.hajk1.foodreservation.dto.FoodReservationRequest;
 import me.hajk1.foodreservation.dto.FoodResponse;
 import me.hajk1.foodreservation.exception.ResourceNotFoundException;
 import me.hajk1.foodreservation.mapper.DailyMenuMapper;
@@ -16,9 +18,6 @@ import me.hajk1.foodreservation.repository.DailyMenuRepository;
 import me.hajk1.foodreservation.repository.FoodRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -39,7 +38,19 @@ public class FoodService {
     this.dailyMenuMapper = dailyMenuMapper;
     }
 
-    public List<FoodResponse> getAvailableFoods(LocalDate date) {
+  @PreAuthorize("hasRole('ADMIN')")
+  public List<FoodResponse> getAllFoods() {
+    return foodRepository.findAll().stream()
+        .map(foodMapper::toResponse)
+        .collect(Collectors.toList());
+  }
+
+  // Modified method to get available foods for a specific date
+  public List<FoodResponse> getAvailableFoodsByDate(LocalDate date) {
+    if (date == null) {
+      throw new IllegalArgumentException("Date parameter is required");
+    }
+
     return dailyMenuRepository.findByDateAndRemainingServingsGreaterThan(date, 0).stream()
         .map(
             dailyMenu -> {
@@ -67,35 +78,17 @@ public class FoodService {
     }
 
   @PreAuthorize("hasRole('ADMIN')")
-  public void addFoodToDaily(Long foodId, LocalDate date, int maxServings)
+  public DailyMenuResponse addFoodToDaily(@Valid DailyMenuRequest request)
       throws ResourceNotFoundException {
     Food food =
         foodRepository
-            .findById(foodId)
-            .orElseThrow(() -> new ResourceNotFoundException("Food not found"));
+            .findById(request.getFoodId())
+            .orElseThrow(() -> new ResourceNotFoundException("Food", "id", request.getFoodId()));
 
     DailyMenu dailyMenu =
         DailyMenu.builder()
             .food(food)
-            .date(date)
-            .maxServings(maxServings)
-            .remainingServings(maxServings)
-            .build();
-
-    dailyMenuRepository.save(dailyMenu);
-  }
-
-  public DailyMenuResponse addFoodToDaily(@Valid FoodReservationRequest request)
-      throws ResourceNotFoundException {
-    Food food =
-        foodRepository
-            .findById(Long.valueOf(request.getFoodId()))
-            .orElseThrow(() -> new ResourceNotFoundException("Food not found"));
-
-    DailyMenu dailyMenu =
-        DailyMenu.builder()
-            .food(food)
-            .date(request.getReservationDate())
+            .date(request.getDate())
             .maxServings(request.getMaxServings())
             .remainingServings(request.getMaxServings())
             .build();
@@ -103,6 +96,7 @@ public class FoodService {
     return dailyMenuMapper.toResponse(dailyMenuRepository.save(dailyMenu));
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   public FoodResponse addFood(FoodRequest request) {
     Food food =
         Food.builder()
@@ -115,6 +109,7 @@ public class FoodService {
     return foodMapper.toResponse(foodRepository.save(food));
   }
 
+  @PreAuthorize("hasRole('ADMIN')")
   public FoodResponse updateFood(String id, FoodRequest request) throws ResourceNotFoundException {
     Food food =
         foodRepository
@@ -127,5 +122,19 @@ public class FoodService {
     food.setAvailable(request.isAvailable());
 
     return foodMapper.toResponse(foodRepository.save(food));
+  }
+
+  @Transactional
+  public void restoreRemainingServings(Long foodId, LocalDate date)
+      throws ResourceNotFoundException {
+    DailyMenu dailyMenu =
+        dailyMenuRepository
+            .findByFoodIdAndDate(foodId, date)
+            .orElseThrow(() -> new ResourceNotFoundException("Food not available for this date"));
+
+    if (dailyMenu.getRemainingServings() < dailyMenu.getMaxServings()) {
+      dailyMenu.setRemainingServings(dailyMenu.getRemainingServings() + 1);
+      dailyMenuRepository.save(dailyMenu);
+    }
   }
 }

@@ -17,4 +17,6 @@ public class FoodRequest {
   private FoodCategory category;
 
   private boolean available = true;
+
+  private String imageUrl;
 }

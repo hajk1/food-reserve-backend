@@ -1,31 +1,41 @@
 package me.hajk1.foodreservation.service;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import me.hajk1.foodreservation.dto.FoodReservationRequest;
 import me.hajk1.foodreservation.dto.FoodReservationResponse;
+import me.hajk1.foodreservation.exception.ResourceNotFoundException;
 import me.hajk1.foodreservation.mapper.ReservationMapper;
 import me.hajk1.foodreservation.model.FoodReservation;
 import me.hajk1.foodreservation.model.enums.ReservationStatus;
 import me.hajk1.foodreservation.repository.ReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationMapper reservationMapper;
+  private final FoodService foodService;
 
   @Autowired
   public ReservationService(
-      ReservationRepository reservationRepository, ReservationMapper reservationMapper) {
+      ReservationRepository reservationRepository,
+      ReservationMapper reservationMapper,
+      FoodService foodService) {
         this.reservationRepository = reservationRepository;
         this.reservationMapper = reservationMapper;
-    }
+    this.foodService = foodService;
+  }
 
-    public FoodReservationResponse createReservation(FoodReservationRequest request) {
+  public FoodReservationResponse createReservation(FoodReservationRequest request)
+      throws ResourceNotFoundException {
+    // Check if food is available and update remaining servings
+    foodService.updateRemainingServings(
+        Long.valueOf(request.getFoodId()), request.getReservationDate());
+
         FoodReservation reservation = FoodReservation.builder()
             .id(UUID.randomUUID().toString())
             .foodId(request.getFoodId())
@@ -60,7 +70,17 @@ public class ReservationService {
     return reservations.stream().map(reservationMapper::toResponse).collect(Collectors.toList());
     }
 
-    public void deleteOrderedFood(String id) {
-    reservationRepository.deleteById(id);
+  public void cancelReservation(String id) throws ResourceNotFoundException {
+    FoodReservation reservation =
+        reservationRepository
+            .findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));
+
+    // Increment remaining servings in daily menu
+    foodService.restoreRemainingServings(
+        Long.valueOf(reservation.getFoodId()), reservation.getReservationDate());
+
+    reservation.setStatus(ReservationStatus.CANCELLED);
+    reservationRepository.save(reservation);
   }
 }
