@@ -10,9 +10,14 @@ import me.hajk1.foodreservation.exception.DuplicateReservationException;
 import me.hajk1.foodreservation.exception.ResourceNotFoundException;
 import me.hajk1.foodreservation.mapper.ReservationMapper;
 import me.hajk1.foodreservation.model.FoodReservation;
+import me.hajk1.foodreservation.model.User;
 import me.hajk1.foodreservation.model.enums.ReservationStatus;
 import me.hajk1.foodreservation.repository.ReservationRepository;
+import me.hajk1.foodreservation.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,15 +25,18 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationMapper reservationMapper;
   private final FoodService foodService;
+  private final UserRepository userRepository;
 
   @Autowired
   public ReservationService(
       ReservationRepository reservationRepository,
       ReservationMapper reservationMapper,
-      FoodService foodService) {
+      FoodService foodService,
+      UserRepository userRepository) {
         this.reservationRepository = reservationRepository;
         this.reservationMapper = reservationMapper;
     this.foodService = foodService;
+    this.userRepository = userRepository;
   }
 
   public FoodReservationResponse createReservation(FoodReservationRequest request)
@@ -86,7 +94,22 @@ public class ReservationService {
         reservationRepository
             .findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Reservation not found"));
+    // Get current authenticated user
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    String currentUsername = authentication.getName();
+    boolean isAdmin =
+        authentication.getAuthorities().stream()
+            .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+    // Get the current user's ID
+    User currentUser =
+        userRepository
+            .findByUsername(currentUsername)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + currentUsername));
 
+    // Check if user is authorized to cancel this reservation
+    if (!isAdmin && !reservation.getPersonId().equals(currentUser.getId().toString())) {
+      throw new AccessDeniedException("You are not authorized to cancel this reservation");
+    }
     // Increment remaining servings in daily menu
     foodService.restoreRemainingServings(
         Long.valueOf(reservation.getFoodId()), reservation.getReservationDate());
