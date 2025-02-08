@@ -12,4 +12,6 @@ public interface DailyMenuRepository extends JpaRepository<DailyMenu, Long> {
   List<DailyMenu> findByDateAndRemainingServingsGreaterThan(LocalDate date, int minServings);
 
   Optional<DailyMenu> findByFoodIdAndDate(Long foodId, LocalDate date);
+
+  void deleteById(Long id);
 }

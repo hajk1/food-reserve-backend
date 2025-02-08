@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import me.hajk1.foodreservation.dto.FoodReservationRequest;
 import me.hajk1.foodreservation.dto.FoodReservationResponse;
+import me.hajk1.foodreservation.exception.DuplicateReservationException;
 import me.hajk1.foodreservation.exception.ResourceNotFoundException;
 import me.hajk1.foodreservation.mapper.ReservationMapper;
 import me.hajk1.foodreservation.model.FoodReservation;
@@ -32,6 +33,15 @@ public class ReservationService {
 
   public FoodReservationResponse createReservation(FoodReservationRequest request)
       throws ResourceNotFoundException {
+    // Check if user already has a confirmed reservation for this date
+    boolean hasExistingReservation =
+        reservationRepository.existsByPersonIdAndReservationDateAndStatus(
+            request.getPersonId(), request.getReservationDate(), ReservationStatus.CONFIRMED);
+
+    if (hasExistingReservation) {
+      throw new DuplicateReservationException(
+          "You already have a confirmed food reservation for " + request.getReservationDate());
+    }
     // Check if food is available and update remaining servings
     foodService.updateRemainingServings(
         Long.valueOf(request.getFoodId()), request.getReservationDate());
@@ -51,20 +61,21 @@ public class ReservationService {
   public List<FoodReservationResponse> getPersonReservations(
       String personId, LocalDate startDate, LocalDate endDate) {
     List<FoodReservation> reservations;
-
     if (startDate != null && endDate != null) {
       reservations =
-          reservationRepository.findByPersonIdAndReservationDateBetween(
-              personId, startDate, endDate);
+          reservationRepository.findByPersonIdAndReservationDateBetweenAndStatus(
+              personId, startDate, endDate, ReservationStatus.CONFIRMED);
     } else if (startDate != null) {
       reservations =
-          reservationRepository.findByPersonIdAndReservationDateGreaterThanEqual(
-              personId, startDate);
+          reservationRepository.findByPersonIdAndReservationDateGreaterThanEqualAndStatus(
+              personId, startDate, ReservationStatus.CONFIRMED);
     } else if (endDate != null) {
       reservations =
-          reservationRepository.findByPersonIdAndReservationDateLessThanEqual(personId, endDate);
+          reservationRepository.findByPersonIdAndReservationDateLessThanEqualAndStatus(
+              personId, endDate, ReservationStatus.CONFIRMED);
     } else {
-      reservations = reservationRepository.findByPersonId(personId);
+      reservations =
+          reservationRepository.findByPersonIdAndStatus(personId, ReservationStatus.CONFIRMED);
     }
 
     return reservations.stream().map(reservationMapper::toResponse).collect(Collectors.toList());

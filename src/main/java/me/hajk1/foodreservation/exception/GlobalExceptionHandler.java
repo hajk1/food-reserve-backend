@@ -74,4 +74,13 @@ public class GlobalExceptionHandler {
             System.currentTimeMillis());
     return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+  @ExceptionHandler(DuplicateReservationException.class)
+  public ResponseEntity<ErrorResponse> handleDuplicateReservationException(
+      DuplicateReservationException ex) {
+    ErrorResponse error =
+        new ErrorResponse(
+            HttpStatus.CONFLICT.getReasonPhrase(), ex.getMessage(), System.currentTimeMillis());
+    return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+  }
 }

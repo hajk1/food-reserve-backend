@@ -192,4 +192,20 @@ public class FoodController {
           LocalDate date) {
     return ResponseEntity.ok(foodService.getAvailableFoodsByDate(date));
   }
+
+  @DeleteMapping("/admin/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
+  @Operation(
+      summary = "Delete a daily menu",
+      description = "Delete a daily menu by its ID. Only admin users can perform this operation.")
+  @ApiResponses(
+      value = {
+        @ApiResponse(responseCode = "204", description = "Daily menu successfully deleted"),
+        @ApiResponse(responseCode = "404", description = "Daily menu not found"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to delete daily menu")
+      })
+  public ResponseEntity<Void> deleteDailyMenu(@PathVariable Long id) {
+    foodService.deleteDailyMenu(id);
+    return ResponseEntity.noContent().build();
+  }
 }

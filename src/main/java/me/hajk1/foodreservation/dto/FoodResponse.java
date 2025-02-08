@@ -14,4 +14,5 @@ public class FoodResponse {
   private FoodCategory category;
   private Integer remainingServings;
   private boolean available;
+  private Long dailyMenuId;
 }

@@ -9,13 +9,16 @@ import me.hajk1.foodreservation.dto.DailyMenuRequest;
 import me.hajk1.foodreservation.dto.DailyMenuResponse;
 import me.hajk1.foodreservation.dto.FoodRequest;
 import me.hajk1.foodreservation.dto.FoodResponse;
+import me.hajk1.foodreservation.exception.ActiveOrdersExistException;
 import me.hajk1.foodreservation.exception.ResourceNotFoundException;
 import me.hajk1.foodreservation.mapper.DailyMenuMapper;
 import me.hajk1.foodreservation.mapper.FoodMapper;
 import me.hajk1.foodreservation.model.DailyMenu;
 import me.hajk1.foodreservation.model.Food;
+import me.hajk1.foodreservation.model.enums.ReservationStatus;
 import me.hajk1.foodreservation.repository.DailyMenuRepository;
 import me.hajk1.foodreservation.repository.FoodRepository;
+import me.hajk1.foodreservation.repository.ReservationRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
@@ -26,17 +29,20 @@ public class FoodService {
   private final DailyMenuRepository dailyMenuRepository;
     private final FoodMapper foodMapper;
   private final DailyMenuMapper dailyMenuMapper;
+  private final ReservationRepository reservationRepository;
 
   public FoodService(
       FoodRepository foodRepository,
       DailyMenuRepository dailyMenuRepository,
       FoodMapper foodMapper,
-      DailyMenuMapper dailyMenuMapper) {
+      DailyMenuMapper dailyMenuMapper,
+      ReservationRepository reservationRepository) {
         this.foodRepository = foodRepository;
     this.dailyMenuRepository = dailyMenuRepository;
         this.foodMapper = foodMapper;
     this.dailyMenuMapper = dailyMenuMapper;
-    }
+    this.reservationRepository = reservationRepository;
+  }
 
   @PreAuthorize("hasRole('ADMIN')")
   public List<FoodResponse> getAllFoods() {
@@ -52,12 +58,7 @@ public class FoodService {
     }
 
     return dailyMenuRepository.findByDateAndRemainingServingsGreaterThan(date, 0).stream()
-        .map(
-            dailyMenu -> {
-              FoodResponse response = foodMapper.toResponse(dailyMenu.getFood());
-              response.setRemainingServings(dailyMenu.getRemainingServings());
-              return response;
-            })
+        .map(foodMapper::toResponseWithDailyMenu)
         .collect(Collectors.toList());
   }
 
@@ -136,5 +137,27 @@ public class FoodService {
       dailyMenu.setRemainingServings(dailyMenu.getRemainingServings() + 1);
       dailyMenuRepository.save(dailyMenu);
     }
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @Transactional
+  public void deleteDailyMenu(Long id) {
+    DailyMenu dailyMenu =
+        dailyMenuRepository
+            .findById(id)
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Daily menu not found with id: " + id));
+
+    // Check for active orders from today onwards
+    boolean hasActiveOrders =
+        reservationRepository.existsByFoodIdAndStatusAndReservationDateGreaterThanEqual(
+            dailyMenu.getFood().getId().toString(), ReservationStatus.CONFIRMED, LocalDate.now());
+
+    if (hasActiveOrders) {
+      throw new ActiveOrdersExistException(
+          "Cannot delete menu item as there are active orders for this food.");
+    }
+
+    dailyMenuRepository.deleteById(id);
   }
 }

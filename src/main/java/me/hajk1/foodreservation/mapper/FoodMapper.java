@@ -17,4 +17,17 @@ public class FoodMapper {
         .available(food.isAvailable())
         .build();
     }
+
+  public FoodResponse toResponseWithDailyMenu(DailyMenu dailyMenu) {
+    Food food = dailyMenu.getFood();
+    return FoodResponse.builder()
+        .id(food.getId().toString())
+        .name(food.getName())
+        .description(food.getDescription())
+        .category(food.getCategory())
+        .available(food.isAvailable())
+        .dailyMenuId(dailyMenu.getId())
+        .remainingServings(dailyMenu.getRemainingServings())
+        .build();
+  }
 }
