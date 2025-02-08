@@ -1,18 +1,20 @@
 package me.hajk1.foodreservation.service;
 
-
-import me.hajk1.foodreservation.model.User;
-import me.hajk1.foodreservation.repository.UserRepository;
-import me.hajk1.foodreservation.dto.RegisterRequest;
-import me.hajk1.foodreservation.dto.UpdateProfileRequest;
-import me.hajk1.foodreservation.dto.UserProfileResponse;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import me.hajk1.foodreservation.dto.PasswordResetRequest;
+import me.hajk1.foodreservation.dto.RegisterRequest;
+import me.hajk1.foodreservation.dto.UpdateProfileRequest;
+import me.hajk1.foodreservation.dto.UserProfileResponse;
+import me.hajk1.foodreservation.exception.ResourceNotFoundException;
+import me.hajk1.foodreservation.model.User;
+import me.hajk1.foodreservation.repository.UserRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -78,4 +80,54 @@ public class UserService {
 
         return response;
     }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @Transactional
+  public void disableUser(String username) {
+    User user =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+
+    // Prevent disabling the last admin
+    if (isLastAdmin(user)) {
+      throw new IllegalStateException("Cannot disable the last admin user");
+    }
+
+    int updated = userRepository.updateUserEnabled(username, false);
+    if (updated == 0) {
+      throw new ResourceNotFoundException("User not found: " + username);
+    }
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @Transactional
+  public void enableUser(String username) {
+    int updated = userRepository.updateUserEnabled(username, true);
+    if (updated == 0) {
+      throw new ResourceNotFoundException("User not found: " + username);
+    }
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @Transactional
+  public void resetPassword(String username, PasswordResetRequest request) {
+    User user =
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+
+    String encodedPassword = passwordEncoder.encode(request.getNewPassword());
+    int updated = userRepository.updateUserPassword(username, encodedPassword);
+    if (updated == 0) {
+      throw new ResourceNotFoundException("User not found: " + username);
+    }
+  }
+
+  private boolean isLastAdmin(User user) {
+    return user.getRoles().contains("ADMIN")
+        && userRepository.findAll().stream()
+            .filter(u -> u.getEnabled() && !u.getUsername().equals(user.getUsername()))
+            .noneMatch(u -> u.getRoles().contains("ADMIN"));
+  }
 }
